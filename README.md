@@ -66,14 +66,31 @@ analysis/
 ├── did_analysis.py         # Difference-in-Differences regression
 └── event_study.py          # parallel-trends event-study plots
 
-orchestration/dags/patch_impact_dag.py   # Airflow DAG, daily
+orchestration/dags/patch_impact_dag.py   # Airflow DAG, daily (written, not yet live)
 dashboard/app.py            # Streamlit dashboard
+scripts/run_daily_snapshot.sh  # what's actually scheduling the daily run today (see below)
+tests/                      # pytest unit tests for the scraper + DiD regression
 ```
+
+**What's actually running vs. written but not live:** the pipeline is designed
+around Airflow (`orchestration/dags/patch_impact_dag.py`) doing extract → load
+→ dbt → analysis on a daily schedule, and `docker-compose up` will run that.
+Today, the thing actually executing daily is simpler: a macOS launchd job
+fires `scripts/run_daily_snapshot.sh` once a day, which runs
+`hero_rates_scraper.py` directly and loads it to BigQuery — Airflow/Docker
+aren't running yet. `patch_notes_scraper.py` isn't scheduled at all; it's run
+by hand whenever a new patch is spotted live, since patch notes don't change
+between patches and there's no benefit to scraping them daily.
 
 ## Tech stack
 
 Python · BigQuery · dbt · Airflow · Streamlit · GitHub Actions ·
 statsmodels (DiD, panel fixed-effects) · Docker
+
+`.github/workflows/ci.yml` runs on every push/PR to `main`: ruff lint +
+`pytest tests/` for the scraper and DiD regression, then a separate
+`dbt debug`/`dbt compile` job against BigQuery to catch model/schema
+breakage before it reaches a daily run.
 
 ## Setup
 
