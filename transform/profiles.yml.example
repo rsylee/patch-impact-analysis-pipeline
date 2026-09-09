@@ -1,0 +1,12 @@
+ow_patch_impact:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      dataset: ow_marts
+      keyfile: "{{ env_var('GCP_SERVICE_ACCOUNT_JSON') }}"
+      threads: 4
+      timeout_seconds: 300
+      location: US

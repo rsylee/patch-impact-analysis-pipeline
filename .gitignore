@@ -147,7 +147,9 @@ activemq-data/
 # SageMath parsed files
 *.sage.py
 
-# Environments
+# Secrets
+secrets/
+*.env
 .env
 .envrc
 .venv
@@ -218,3 +220,8 @@ __marimo__/
 .streamlit/secrets.toml
 .DS_Store
 Overwatch_Patch_Impact_Pipeline_Design_Doc.pdf
+
+# Daily scrape output and launchd logs -- BigQuery (once set up) is the
+# durable store; local files here are just accumulation until then.
+data/
+logs/

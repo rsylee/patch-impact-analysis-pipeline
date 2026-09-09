@@ -1,0 +1,57 @@
+version: 2
+
+sources:
+  - name: ow_raw
+    dataset: ow_raw
+    tables:
+      - name: hero_rates
+        loaded_at_field: pulled_at
+        freshness:
+          warn_after: {count: 2, period: day}
+          error_after: {count: 5, period: day}
+      - name: patch_events
+
+models:
+  - name: stg_hero_rates
+    columns:
+      - name: hero_key
+        tests:
+          - not_null
+      - name: region
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Americas', 'Asia', 'Europe']
+      - name: rank_tier_ordinal
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1, 2, 3, 4, 5, 6, 7, 8]   # 0=All, 1=Bronze .. 8=Grandmaster
+              quote: false
+      - name: pick_rate
+        tests:
+          # not_null intentionally omitted: Blizzard returns "--" (-> null)
+          # for rarely-picked heroes, mirror matchups, or a fresh patch.
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      - name: winrate
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      - name: ban_rate
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+  - name: stg_patch_notes
+    columns:
+      - name: hero_key
+        tests:
+          - not_null
+      - name: change_type
+        tests:
+          - accepted_values:
+              values: ['buff', 'nerf', 'rework']

@@ -1,0 +1,14 @@
+name: 'ow_patch_impact'
+version: '1.0.0'
+config-version: 2
+
+profile: 'ow_patch_impact'
+
+model-paths: ["models"]
+
+models:
+  ow_patch_impact:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

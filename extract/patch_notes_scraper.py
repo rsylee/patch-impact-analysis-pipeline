@@ -15,6 +15,7 @@ catch all edge cases, so a review_needed flag marks ambiguous rows.
 """
 import re
 import logging
+import unicodedata
 from datetime import datetime
 
 import requests
@@ -36,6 +37,23 @@ BUFF_WHEN_DECREASED = [
     "cooldown", "cost", "recovery", "cast time", "drain", "penalty",
 ]
 REWORK_KEYWORDS = ["reworked", "redesigned", "new"]
+
+# as of 2026-09, Blizzard nests hero names under a role subheading (h4) within
+# "Hero Updates" -- these aren't section boundaries, just grouping, so they
+# must not reset in_hero_updates the way a real section change (e.g. "Stadium
+# Updates", "Bug Fixes") does.
+ROLE_SUBHEADERS = {"tank", "damage", "support"}
+
+
+def slugify_hero_name(name: str) -> str:
+    """match the hero_key slug used by hero_rates_scraper.py, e.g.
+    "D.Mon" -> "dmon", "Torbjörn" -> "torbjorn", "Jetpack Cat" -> "jetpack-cat"."""
+    normalized = unicodedata.normalize("NFKD", name)
+    ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
+    return (
+        ascii_name.lower()
+        .replace(".", "").replace(":", "").replace(" ", "-")
+    )
 
 # matches "Stat increased/reduced/decreased from A to B"
 # uses \d+(?:\.\d+)? to avoid capturing trailing punctuation like "22.5."
@@ -130,21 +148,24 @@ def scrape_patch_notes() -> pd.DataFrame:
             current_hero = None
 
         elif tag.name == "h4":
-            in_hero_updates = "hero updates" in tag.get_text(strip=True).lower()
-            if not in_hero_updates:
-                current_hero = None
+            heading_text = tag.get_text(strip=True).lower()
+            if heading_text in ROLE_SUBHEADERS:
+                # role grouping within the current section, not a section boundary
+                continue
+            in_hero_updates = heading_text == "hero updates"
+            current_hero = None
 
         elif tag.name == "h5" and in_hero_updates:
-            # match the hero_key slug used by Blizzard's Hero Statistics page
-            # (hero_rates_scraper.py), e.g. "D.Mon" -> "dmon", "Jetpack Cat" -> "jetpack-cat"
-            current_hero = (
-                tag.get_text(strip=True).lower()
-                .replace(".", "").replace(":", "").replace(" ", "-")
-            )
+            current_hero = slugify_hero_name(tag.get_text(strip=True))
 
         elif tag.name == "ul" and in_hero_updates and current_hero and current_date:
             for li in tag.find_all("li", recursive=False):
                 change_text = li.get_text(strip=True)
+                # some bullets are tagged for an experimental mode (e.g. "(6v6)")
+                # rather than the standard competitive 5v5 queue hero_rates_scraper
+                # measures -- skip those, they'd be a false treatment event.
+                if re.search(r"\(6v6\)\s*$", change_text):
+                    continue
                 parsed = parse_change_line(change_text)
                 if parsed is None:
                     continue

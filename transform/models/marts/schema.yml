@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: mart_hero_stats_daily
+    columns:
+      - name: pulled_date
+        tests:
+          - not_null
+      - name: hero_key
+        tests:
+          - not_null
+      - name: avg_pick_rate
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+  - name: mart_patch_event_panel
+    columns:
+      - name: patch_date
+        tests:
+          - not_null
+      - name: hero_key
+        tests:
+          - not_null
+      - name: is_treated
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+              quote: false

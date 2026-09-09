@@ -28,12 +28,43 @@ def get_client() -> bigquery.Client:
     return bigquery.Client(project=PROJECT_ID)
 
 
+# Explicit schemas -- autodetect infers a fresh schema from each day's CSV in
+# isolation (not from the existing table), so a column that happens to be
+# all-whole-numbers on a given day (e.g. banrate=0 for every hero) gets
+# guessed as INTEGER and breaks WRITE_APPEND against the FLOAT column from
+# every other day.
+TABLE_SCHEMAS = {
+    "hero_rates": [
+        bigquery.SchemaField("pulled_at", "TIMESTAMP"),
+        bigquery.SchemaField("region", "STRING"),
+        bigquery.SchemaField("tier", "STRING"),
+        bigquery.SchemaField("hero_key", "STRING"),
+        bigquery.SchemaField("hero_name", "STRING"),
+        bigquery.SchemaField("role", "STRING"),
+        bigquery.SchemaField("subrole", "STRING"),
+        bigquery.SchemaField("winrate", "FLOAT64"),
+        bigquery.SchemaField("pickrate", "FLOAT64"),
+        bigquery.SchemaField("banrate", "FLOAT64"),
+    ],
+    "patch_events": [
+        bigquery.SchemaField("patch_date", "DATE"),
+        bigquery.SchemaField("hero_key", "STRING"),
+        bigquery.SchemaField("change_text", "STRING"),
+        bigquery.SchemaField("stat_name", "STRING"),
+        bigquery.SchemaField("change_type", "STRING"),
+        bigquery.SchemaField("magnitude", "FLOAT64"),
+        bigquery.SchemaField("magnitude_unit", "STRING"),
+        bigquery.SchemaField("review_needed", "BOOLEAN"),
+    ],
+}
+
+
 def load_csv_to_table(client: bigquery.Client, csv_path: str, table_name: str, write_disposition=bigquery.WriteDisposition.WRITE_APPEND):
     table_id = f"{PROJECT_ID}.{DATASET_RAW}.{table_name}"
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.CSV,
         skip_leading_rows=1,
-        autodetect=True,
+        schema=TABLE_SCHEMAS[table_name],
         write_disposition=write_disposition,
     )
     with open(csv_path, "rb") as f:

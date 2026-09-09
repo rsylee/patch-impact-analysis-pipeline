@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  airflow-webserver:
+    image: apache/airflow:2.9.3
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - GOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/secrets/gcp-service-account.json
+    volumes:
+      - ./orchestration/dags:/opt/airflow/dags
+      - ./extract:/opt/airflow/extract
+      - ./load:/opt/airflow/load
+      - ./transform:/opt/airflow/transform
+      - ./analysis:/opt/airflow/analysis
+      - ./secrets:/opt/airflow/secrets
+      - ./data:/opt/airflow/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    command: webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.9.3
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - GOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/secrets/gcp-service-account.json
+    volumes:
+      - ./orchestration/dags:/opt/airflow/dags
+      - ./extract:/opt/airflow/extract
+      - ./load:/opt/airflow/load
+      - ./transform:/opt/airflow/transform
+      - ./analysis:/opt/airflow/analysis
+      - ./secrets:/opt/airflow/secrets
+      - ./data:/opt/airflow/data
+    depends_on:
+      - postgres
+    command: scheduler
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  dashboard:
+    build: .
+    command: streamlit run dashboard/app.py --server.port 8501
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-service-account.json
+    volumes:
+      - ./secrets:/app/secrets
+    ports:
+      - "8501:8501"
+
+volumes:
+  postgres_data:
