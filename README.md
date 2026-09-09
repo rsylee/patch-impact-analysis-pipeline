@@ -124,14 +124,3 @@ collected and available for the dashboard but not the causal analysis.
 Extending the model to include region as a fixed effect (rather than
 filtering it out) is a reasonable next step if regional comparisons
 become interesting.
-
-## Résumé bullets
-
-- Built an automated ETL pipeline (Airflow, dbt, BigQuery) scraping
-  Blizzard's official Hero Statistics page daily across 3 regions and 9
-  rank tiers to track Overwatch hero pick-rate and win-rate shifts across
-  balance patches; applied difference-in-differences and event-study
-  analysis to estimate the causal impact of buffs/nerfs.
-- Designed and deployed a CI/CD-tested (GitHub Actions), containerized
-  (Docker) data pipeline with dbt-based data quality tests and a public
-  Streamlit dashboard visualizing hero meta trends by region and rank tier.
