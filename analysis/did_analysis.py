@@ -4,29 +4,22 @@ analysis/did_analysis.py
 Estimates the causal effect of Overwatch balance patches on hero pick_rate
 (and winrate) using Difference-in-Differences (DiD) regression.
 
-Model:
-    pick_rate = b0 + b1*is_treated + b2*is_post + b3*(is_treated*is_post)
-                + C(rank_tier) + C(hero_key) + error
+Model: 
+pick_rate = b0 + b1*is_treated + b2*is_post + b3*(is_treated*is_post)
++ C(rank_tier) + C(hero_key) + error
 
-b3 (is_treated:is_post) is the Average Treatment Effect on the Treated:
-the expected change in pick_rate for patched heroes relative to unpatched
-heroes after the patch, controlling for hero and rank-tier fixed effects.
+b3 (is_treated:is_post) = ATT: the causal effect of the patch on pick_rate,
+controlling for hero and rank-tier fixed effects.
 
-winrate is a co-primary outcome (data source: Blizzard's official Hero
-Statistics page, which is scoped to "the start of the most recent patch"
-per that page's own FAQ -- not a lifetime/career-cumulative stat, so it
-actually moves within a patch window). One caveat worth remembering when
-reading results: each day's number is a *cumulative* average since patch
-start, not an independent daily rate -- days_since_patch=1 reflects ~1
-day of games, days_since_patch=20 reflects ~20 days, so early post-patch
-observations are noisier (smaller effective sample) than late ones.
-
-ban_rate is a third outcome run alongside pick_rate/winrate: it's a
-plausible leading indicator of perceived hero strength -- players ban on
-reputation ("this buff made them scary") faster than pick_rate/winrate
-fully reflect the change, so a patch's effect may show up in ban_rate
-first, or show up there even when the win-rate effect is too noisy to be
-significant yet.
+Outcomes:
+- pick_rate, winrate: co-primary. winrate is patch-scoped (Blizzard's Hero
+  Stats page resets each patch, not lifetime-cumulative), so it moves
+  within a patch window. Caveat: each day's value is a cumulative average
+  since patch start (days_since_patch=1 ~ 1 day of games, =20 ~ 20 days),
+  so early post-patch observations are noisier than later ones.
+- ban_rate: secondary. Hypothesized leading indicator -- players ban on
+  reputation ("this got buffed") faster than pick/win rate fully reflect
+  the change, so patch effects may surface here first.
 """
 import pandas as pd
 import statsmodels.formula.api as smf
