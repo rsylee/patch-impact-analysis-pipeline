@@ -93,6 +93,10 @@ breakage before it reaches a daily run.
 
 ## Setup
 
+Tested on Python 3.11 (matches CI). A newer Python isn't guaranteed to work —
+e.g. Python 3.14 can't install `apache-airflow==2.9.3` at all (that package
+caps out at 3.12), which is one reason Airflow setup is deferred for now.
+
 1. **BigQuery**: create a GCP project, a service account with BigQuery
    Data Editor + Job User roles, and the `ow_raw` / `ow_marts` datasets.
 2. Copy `.env.example` to `.env` and fill in your project/dataset names.
