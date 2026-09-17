@@ -51,6 +51,8 @@ Extract (hero rates scrape + patch notes scrape) → Load
 (DiD, panel regression, event studies) → Orchestrate (Airflow, daily) →
 Visualize (Streamlit dashboard)
 
+## Project structure
+
 ```
 extract/
 ├── hero_rates_scraper.py   # Blizzard's official Hero Statistics page
@@ -77,10 +79,13 @@ around Airflow (`orchestration/dags/patch_impact_dag.py`) doing extract → load
 → dbt → analysis on a daily schedule, and `docker-compose up` will run that.
 Today, the thing actually executing daily is simpler: a macOS launchd job
 fires `scripts/run_daily_snapshot.sh` once a day, which runs
-`hero_rates_scraper.py` directly and loads it to BigQuery — Airflow/Docker
-aren't running yet. `patch_notes_scraper.py` isn't scheduled at all; it's run
-by hand whenever a new patch is spotted live, since patch notes don't change
-between patches and there's no benefit to scraping them daily.
+`hero_rates_scraper.py`, then `patch_notes_scraper.py`, then loads both to
+BigQuery — Airflow/Docker aren't running yet. Patch notes scraping used to be
+run by hand (patch notes don't change between patches, so daily scraping
+seemed unnecessary) — that turned out to be a bug: a live patch dropped while
+the CSV sat stale, and BigQuery's `patch_events` table kept getting
+truncate-reloaded with the same outdated file every day without anyone
+noticing. It's been in the daily job since 2026-09-17.
 
 ## Tech stack
 
@@ -107,37 +112,57 @@ breakage before it reaches a daily run.
 `docker-compose up` runs Airflow (daily automated extract → load → dbt →
 analysis) plus the Streamlit dashboard as containers.
 
+## Current status (as of 2026-09-17)
+
+**Fixed this session** (full detail in commit history): a recurring `rq`
+game-mode bug that silently corrupted 6 unrecoverable days of
+`ow_raw.hero_rates` (now purged, plus a fail-loud sanity guard so it can't
+happen silently again); duplicate rows in BigQuery from a stray manual
+scrape and a double-load; an `is_post` day-0 boundary bug; a rework-classifier
+false positive on the bare word `"new"`; two DiD identification bugs —
+mixed buff+nerf heroes and cross-patch control leakage — both fixed via
+`scope_for_change_type()`; bug-fix-only patches (e.g. 2026-09-10) now
+register as events so affected heroes are pulled out of controls; and a
+`MIN_POST_DAYS` gate so a same-day patch isn't analyzed before it has any
+post-data.
+
+**Latest DiD results — patch dated 2026-09-08** (region = Americas, all
+non-`All` tiers, hero + rank-tier fixed effects, hero-clustered SEs).
+Patches are identified purely by calendar `patch_date` — Blizzard's page has
+no season identifier anywhere in its markup.
+
+| outcome | BUFF (n=5 heroes) | NERF (n=8 heroes, mixed-direction heroes excluded) |
+|---|---|---|
+| pick_rate | +0.66pp, p=0.135 | **−2.59pp, p=0.005** |
+| winrate | +1.17pp, p=0.077 | −0.93pp, p=0.446 |
+| ban_rate | −0.04pp, p=0.896 | +3.15pp, p=0.387 |
+
+Nerf's pick_rate effect is the cleanest signal on record so far — right
+direction, p=0.005, backed by a flat pre-trend that breaks cleanly at patch
+day in `analysis/output/event_study_pick_rate_nerf.png`. Buff points the
+right way but isn't significant at n=5. Not enough data yet for the
+2026-09-17 D.Mon nerf (`MIN_POST_DAYS`) or for reworks (none on record after
+the classifier fix).
+
 ## Limitations & mitigations
 
-**Sample size isn't disclosed.** Blizzard doesn't publish the number of
-games behind each pick/win/ban rate. Rarely-picked heroes, mirror
-matchups, and freshly-released patches show up as `"--"` in the raw
-payload — the scraper converts these to `null` rather than guessing a
-value, and `mart_patch_event_panel`/`did_analysis.py` don't backfill them.
-There's no way to attach a confidence interval to Blizzard's own numbers
-the way there would be with raw per-player counts.
-
-**Win rate is cumulative-since-patch-start, not a daily rate.** Because
-the source resets at the start of each patch, `days_since_patch = 1`
-reflects roughly one day of games while `days_since_patch = 20` reflects
-about twenty — so early post-patch observations carry more noise than
-later ones. Worth keeping in mind when reading `did_analysis.py` output
-or the event-study plots, not something the code currently corrects for.
-
-**No historical backfill.** The page reflects the *current* patch only —
-there's no way to retroactively pull rates for a patch that has already
-ended. Causal analysis is only possible for patches observed after this
-pipeline started running daily.
-
-**Parallel-trends assumption isn't guaranteed.** `event_study.py` checks
-this visually (treated/control pick rate, win rate, and ban rate should track
-together before day 0), but confounders that land in the same patch as a
-hero's balance change — map pool changes, other heroes' changes shifting
-the counter-pick landscape — aren't controlled for in the regression.
-
-**Region scope.** The DiD panel is fixed to Americas to avoid mixing
-metas that may differ structurally by region; Asia/Europe data is
-collected and available for the dashboard but not the causal analysis.
-Extending the model to include region as a fixed effect (rather than
-filtering it out) is a reasonable next step if regional comparisons
-become interesting.
+- **Sample size isn't disclosed.** Blizzard doesn't publish game counts
+  behind each rate; rare heroes/mirror matchups show as `"--"`, converted to
+  `null` rather than guessed. No confidence interval on Blizzard's own numbers.
+- **Win rate is cumulative-since-patch-start, not daily.** `days_since_patch`
+  = 1 reflects ~1 day of games, = 20 reflects ~20 — early observations are
+  noisier. Not corrected for in the code.
+- **No historical backfill.** The page reflects only the current patch, so
+  causal analysis only covers patches observed since this pipeline went live.
+- **Parallel-trends isn't guaranteed.** `event_study.py` checks it visually,
+  but same-patch confounders (map changes, other heroes shifting the meta)
+  aren't controlled for in the regression.
+- **Region scope.** DiD is fixed to Americas to avoid mixing regional metas;
+  Asia/Europe are collected but not analyzed causally.
+- **Cluster-robust SEs are near-degenerate at this roster size.** ~40-50
+  hero fixed effects against ~40-50 hero clusters is right at the edge of
+  what cluster-robust variance estimation needs — a small-N constraint of
+  the roster, not something code cleanup fixes.
+- **Heroes buffed and nerfed in the same patch are excluded from both
+  arms.** Their net effect is ambiguous, so `find_mixed_heroes` drops them
+  rather than guessing a direction.
