@@ -46,8 +46,8 @@ ROLE_SUBHEADERS = {"tank", "damage", "support"}
 
 
 def slugify_hero_name(name: str) -> str:
-    """match the hero_key slug used by hero_rates_scraper.py, e.g.
-    "D.Mon" -> "dmon", "Torbjörn" -> "torbjorn", "Jetpack Cat" -> "jetpack-cat"."""
+    """match the hero_key slug used by hero_rates_scraper.py, 
+    e.g. "D.Mon" -> "dmon", "Torbjörn" -> "torbjorn", "Jetpack Cat" -> "jetpack-cat"."""
     normalized = unicodedata.normalize("NFKD", name)
     ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
     return (
