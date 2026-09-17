@@ -25,7 +25,14 @@ REGIONS = ["Americas", "Asia", "Europe"]
 TIERS = ["All", "Bronze", "Silver", "Gold", "Platinum", "Emerald", "Diamond", "Master", "Grandmaster"]
 ROLE = "All"        # cosmetic only -- doesn't filter server-side, see module docstring
 MAP_FILTER = "all-maps"
-GAME_MODE = "2"     # rq=2 = "Competitive - Role Queue" (rq=0 = "Quick Play - Role Queue")
+# rq mapping is NOT stable -- Blizzard has silently reassigned these IDs at
+# least twice (2026-08-22, and again as of 2026-09-08 when this file was
+# rewritten and the previous fix was lost). Verified live 2026-09-17:
+# rq=1 -> real ban data (Ana banrate ~11.5, matches historical). rq=0 and
+# rq=2 -> banrate=0 for every hero (a banless mode). If banrate goes
+# flat-zero again, re-verify all three rq values by hand before assuming "1"
+# is still right -- see the flat-zero guard in collect_all() below.
+GAME_MODE = "1"
 PLATFORM = "PC"
 
 
@@ -99,9 +106,29 @@ def collect_all() -> pd.DataFrame:
     return pd.DataFrame(all_rows)
 
 
+def check_banrate_sanity(df: pd.DataFrame, zero_frac_threshold: float = 0.95) -> None:
+    """Guard against the recurring rq-mode bug: if banrate comes back
+    all/nearly-all zero, GAME_MODE is pointing at a banless mode again
+    (Blizzard reassigned the rq IDs), not a real data pattern. Raise rather
+    than silently save/load corrupted data -- see the 2026-08-22 and
+    2026-09-08 incidents in project memory."""
+    valid = df["banrate"].dropna()
+    if len(valid) == 0:
+        return
+    zero_frac = (valid == 0).mean()
+    if zero_frac >= zero_frac_threshold:
+        raise RuntimeError(
+            f"banrate is {zero_frac:.0%} zero across {len(valid)} rows -- this matches "
+            f"the known rq-mode bug pattern (GAME_MODE={GAME_MODE!r} may be pointing at a "
+            f"banless mode again). Refusing to save/load this snapshot. Re-verify rq=0/1/2 "
+            f"live by hand before re-running."
+        )
+
+
 if __name__ == "__main__":
     import os
     os.makedirs("data/raw/hero_rates", exist_ok=True)
     df = collect_all()
+    check_banrate_sanity(df)  # raises (non-zero exit) if the rq-mode bug has recurred
     df.to_csv("data/raw/hero_rates/hero_rates_latest.csv", index=False)
     logger.info(f"Saved {len(df)} hero-rate rows")
