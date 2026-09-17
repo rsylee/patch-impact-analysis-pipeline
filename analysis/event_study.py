@@ -37,7 +37,7 @@ def plot_event_study(pivoted: pd.DataFrame, change_type: str, outcome: str, out_
     fig, ax = plt.subplots(figsize=(9, 5))
     ax.plot(pivoted.index, pivoted["diff"], marker="o", linewidth=1.5)
     ax.axvline(0, color="red", linestyle="--", label="Patch day")
-    ax.axhline(0, color="gray", linewidth=0.8)
+    ax.axhline(0, color="blue", linewidth=0.8)
     ax.set_title(f"Event Study: Treated – Control {outcome} Gap ({change_type})")
     ax.set_xlabel("Days since patch")
     ax.set_ylabel(f"{outcome} difference (pp)")
