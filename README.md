@@ -48,8 +48,7 @@ per-player HTTP calls).
 
 Extract (hero rates scrape + patch notes scrape) → Load
 (BigQuery) → Transform (dbt, with automated data-quality tests) → Analyze
-(DiD, panel regression, event studies) → Orchestrate (Airflow, daily) →
-Visualize (Streamlit dashboard)
+(DiD, panel regression, event studies) → Visualize (Streamlit dashboard)
 
 ## Project structure
 
@@ -68,29 +67,24 @@ analysis/
 ├── did_analysis.py         # Difference-in-Differences regression
 └── event_study.py          # parallel-trends event-study plots
 
-orchestration/dags/patch_impact_dag.py   # Airflow DAG, daily (written, not yet live)
 dashboard/app.py            # Streamlit dashboard
-scripts/run_daily_snapshot.sh  # what's actually scheduling the daily run today (see below)
+scripts/run_daily_snapshot.sh  # what's actually scheduling the daily run (see below)
 tests/                      # pytest unit tests for the scraper + DiD regression
 ```
 
-**What's actually running vs. written but not live:** the pipeline is designed
-around Airflow (`orchestration/dags/patch_impact_dag.py`) doing extract → load
-→ dbt → analysis on a daily schedule, and `docker-compose up` will run that.
-Today, the thing actually executing daily is simpler: a macOS launchd job
-fires `scripts/run_daily_snapshot.sh` once a day, which runs
-`hero_rates_scraper.py`, then `patch_notes_scraper.py`, then loads both to
-BigQuery — Airflow/Docker aren't running yet. Patch notes scraping used to be
-run by hand (patch notes don't change between patches, so daily scraping
-seemed unnecessary) — that turned out to be a bug: a live patch dropped while
-the CSV sat stale, and BigQuery's `patch_events` table kept getting
+**Daily automation:** a macOS launchd job fires `scripts/run_daily_snapshot.sh`
+once a day, which runs `hero_rates_scraper.py`, then `patch_notes_scraper.py`,
+then loads both to BigQuery. Patch notes scraping used to be run by hand
+(patch notes don't change between patches, so daily scraping seemed
+unnecessary) — that turned out to be a bug: a live patch dropped while the
+CSV sat stale, and BigQuery's `patch_events` table kept getting
 truncate-reloaded with the same outdated file every day without anyone
 noticing. It's been in the daily job since 2026-09-17.
 
 ## Tech stack
 
-Python · BigQuery · dbt · Airflow · Streamlit · GitHub Actions ·
-statsmodels (DiD, panel fixed-effects) · Docker
+Python · BigQuery · dbt · Streamlit · GitHub Actions ·
+statsmodels (DiD, panel fixed-effects)
 
 `.github/workflows/ci.yml` runs on every push/PR to `main`: ruff lint +
 `pytest tests/` for the scraper and DiD regression, then a separate
@@ -108,9 +102,6 @@ breakage before it reaches a daily run.
 6. `cd transform && dbt run --profiles-dir . && dbt test --profiles-dir .`
 7. `python -m analysis.did_analysis`
 8. `streamlit run dashboard/app.py`
-
-`docker-compose up` runs Airflow (daily automated extract → load → dbt →
-analysis) plus the Streamlit dashboard as containers.
 
 ## Current status (as of 2026-09-17)
 
