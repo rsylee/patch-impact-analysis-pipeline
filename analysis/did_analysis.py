@@ -26,6 +26,7 @@ Outcomes:
   the change, so patch effects may surface here first.
 """
 import logging
+
 import pandas as pd
 import statsmodels.formula.api as smf
 
