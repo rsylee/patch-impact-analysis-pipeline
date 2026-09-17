@@ -39,7 +39,7 @@ def load_panel() -> pd.DataFrame:
 
 def run_did(df: pd.DataFrame, change_type: str = "buff", outcome: str = "pick_rate"):
     """Run DiD for a single change_type (buff/nerf/rework) and outcome variable.
-    Standard errors are clustered at the hero level to be conservative."""
+    Standard errors are clustered at the hero level."""
     subset = df[
         (df["change_type"] == change_type) | (df["is_treated"] == 0)
     ].copy()
