@@ -180,5 +180,7 @@ if __name__ == "__main__":
                     print(f"  ** UNRELIABLE: only {n_treated} treated hero(es) -- cluster-robust "
                           f"SE is degenerate with this few clusters. Don't read this p-value "
                           f"as significance. **")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 -- intentionally broad: one
+                # outcome/change_type combo failing (e.g. empty subset,
+                # singular design matrix) shouldn't kill the whole report loop
                 print(f"  [{change.upper()}] skipped: {e}")

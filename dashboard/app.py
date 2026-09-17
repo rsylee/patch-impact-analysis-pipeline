@@ -4,8 +4,8 @@ dashboard/app.py
 Streamlit dashboard: "Which heroes actually got stronger after this patch?"
 Reads from BigQuery mart tables; caches data for 1 hour to avoid repeated queries.
 """
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 from load.bigquery_loader import get_client
 

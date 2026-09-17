@@ -11,6 +11,7 @@ see analysis/did_analysis.py docstring for why all three are treated as
 outcomes worth checking.
 """
 import os
+
 import matplotlib.pyplot as plt
 import pandas as pd
 
