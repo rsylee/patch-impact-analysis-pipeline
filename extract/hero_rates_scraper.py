@@ -87,8 +87,8 @@ def parse_rows(region: str, tier: str, rows: list[dict], pulled_at: str) -> list
 
 
 def collect_all() -> pd.DataFrame:
-    """Cycle through every (region, tier) combination -- 3 regions x 9 tiers
-    = 27 requests -- and return one combined DataFrame."""
+    """Cycle through every (region, tier) combination (3 regions x 9 tiers
+    = 27 requests) and return one combined DataFrame."""
     pulled_at = datetime.now(timezone.utc).isoformat()
     all_rows = []
     for region in REGIONS:
