@@ -54,4 +54,7 @@ models:
       - name: change_type
         tests:
           - accepted_values:
-              values: ['buff', 'nerf', 'rework']
+              # 'bugfix' = hero named in a Bug Fixes note with no balance change --
+              # kept (not filtered like 'unclassified') so it still marks the hero
+              # is_treated in mart_patch_event_panel and pulls it out of controls.
+              values: ['buff', 'nerf', 'rework', 'bugfix']
