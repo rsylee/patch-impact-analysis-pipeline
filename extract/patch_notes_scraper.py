@@ -16,7 +16,7 @@ catch all edge cases, so a review_needed flag marks ambiguous rows.
 import re
 import logging
 import unicodedata
-from datetime import datetime
+from datetime import datetime 
 
 import requests
 from bs4 import BeautifulSoup
