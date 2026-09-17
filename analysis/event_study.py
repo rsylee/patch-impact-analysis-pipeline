@@ -14,12 +14,15 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from analysis.did_analysis import load_panel
+from analysis.did_analysis import load_panel, scope_for_change_type
 
 
 def build_event_study_series(df: pd.DataFrame, change_type: str, outcome: str = "pick_rate") -> pd.DataFrame:
-    """Compute mean treated-minus-control outcome gap for each day relative to patch."""
-    subset = df[(df["change_type"] == change_type) | (df["is_treated"] == 0)]
+    """Compute mean treated-minus-control outcome gap for each day relative to
+    patch. Uses the same scoping as run_did (mixed buff+nerf heroes dropped,
+    controls restricted to patch_date(s) with a real treated hero of this
+    change_type) so this plot matches what the regression actually saw."""
+    subset = scope_for_change_type(df, change_type)
     grouped = (
         subset.groupby(["days_since_patch", "is_treated"])[outcome]
         .mean()
