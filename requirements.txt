@@ -7,7 +7,6 @@ dbt-bigquery==1.8.2
 statsmodels==0.14.6
 linearmodels==6.0 
 matplotlib==3.9.0 
-streamlit==1.37.0 
-apache-airflow==2.9.3 
+streamlit==1.37.0
 pytest==8.3.2
 python-dotenv==1.0.1
