@@ -13,15 +13,15 @@ Verified page structure (live page, 2026-08):
 change_type classification and magnitude extraction use regex and may not
 catch all edge cases, so a review_needed flag marks ambiguous rows.
 """
+import logging
 import os
 import re
-import logging
 import unicodedata
 from datetime import datetime
 
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -178,7 +178,9 @@ def scrape_patch_notes(hero_names: list[tuple[str, str]] | None = None) -> pd.Da
             raw = tag.get_text(strip=True)
             try:
                 date_part = raw.split("–")[-1].strip()  # en-dash split
-                current_date = datetime.strptime(date_part, "%B %d, %Y").date()
+                # immediately truncated to .date() -- a pure calendar date
+                # with no time component, so tz-awareness doesn't apply here
+                current_date = datetime.strptime(date_part, "%B %d, %Y").date()  # noqa: DTZ007
             except ValueError:
                 current_date = None
             in_hero_updates = False

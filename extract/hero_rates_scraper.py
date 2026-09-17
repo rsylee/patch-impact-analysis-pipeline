@@ -8,14 +8,14 @@ broken out by region and rank tier (only competitive mode; not quick-play).
 Uses requests to pull the page HTML, then BeautifulSoup to locate the
 <blz-data-table> element and parse its "allrows" attribute as JSON.
 """
-import time
-import logging
 import json
+import logging
+import time
 from datetime import datetime, timezone
 
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
