@@ -31,6 +31,12 @@ else
     exit 1
 fi
 
+if "$PYTHON_BIN" -m extract.patch_notes_scraper >> "$LOG_FILE" 2>&1; then
+    echo "[$TIMESTAMP] patch notes scrape OK -- data/raw/patch_notes/patch_events.csv refreshed" >> "$LOG_FILE"
+else
+    echo "[$TIMESTAMP] PATCH NOTES SCRAPE FAILED -- proceeding with hero-rates load anyway, patch_events.csv left at its last good state" >> "$LOG_FILE"
+fi
+
 if [ -f "$REPO_DIR/.env" ] && [ -f "$REPO_DIR/secrets/gcp-service-account.json" ]; then
     echo "[$TIMESTAMP] GCP credentials found -- attempting BigQuery load" >> "$LOG_FILE"
     if "$PYTHON_BIN" -m load.bigquery_loader >> "$LOG_FILE" 2>&1; then
