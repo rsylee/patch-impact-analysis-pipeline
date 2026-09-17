@@ -4,12 +4,12 @@ load/bigquery_loader.py
 This script loads local raw CSVs into BigQuery raw dataset (ow_raw).
 Uses WRITE_APPEND so each daily run accumulates a time-series of snapshots.
 """
-import os
 import logging
+import os
 
+from dotenv import load_dotenv
 from google.cloud import bigquery
 from google.oauth2 import service_account
-from dotenv import load_dotenv
 
 load_dotenv()
 
