@@ -137,6 +137,15 @@ right way but isn't significant at n=5. Not enough data yet for the
 2026-09-17 D.Mon nerf (`MIN_POST_DAYS`) or for reworks (none on record after
 the classifier fix).
 
+**Interpretation.** Nerfs moved pick rate significantly but not win rate.
+My hypothesis is that players react to the *signal* of a nerf (they stop
+picking the hero) faster than the hero's actual strength shows up in
+results. But this is not confirmed yet, since the win-rate estimate may
+simply be underpowered at n=8, and selection could also mask it — if
+casual players drop the hero first, the remaining players skew toward
+specialists, which props up its win rate. The ban-rate-as-leading-indicator
+hypothesis from the design was not supported for this patch.
+
 ## Limitations & mitigations
 
 - **Sample size isn't disclosed.** Blizzard doesn't publish game counts
