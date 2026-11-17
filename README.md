@@ -63,6 +63,8 @@ transform/                  # dbt project
 ├── models/staging/stg_hero_rates.sql, stg_patch_notes.sql
 └── models/marts/mart_hero_stats_daily.sql, mart_patch_event_panel.sql
 
+orchestration/dags/patch_impact_dag.py  # Airflow DAG (extract → load → dbt run → dbt test → analysis)
+
 analysis/
 ├── did_analysis.py         # Difference-in-Differences regression
 └── event_study.py          # parallel-trends event-study plots
@@ -70,6 +72,8 @@ analysis/
 dashboard/app.py            # Streamlit dashboard
 scripts/run_daily_snapshot.sh  # what's actually scheduling the daily run (see below)
 tests/                      # pytest unit tests for the scraper + DiD regression
+docker-compose.yml          # Airflow + Postgres + dashboard containers
+.github/workflows/ci.yml    # lint + tests, then dbt checks against BigQuery
 ```
 
 **Daily automation:** a macOS launchd job fires `scripts/run_daily_snapshot.sh`
@@ -83,13 +87,15 @@ noticing. It's been in the daily job since 2026-09-17.
 
 ## Tech stack
 
-Python · BigQuery · dbt · Streamlit · GitHub Actions ·
-statsmodels (DiD, panel fixed-effects)
+Python · BigQuery · dbt · Airflow · Docker · Streamlit · 
+GitHub Actions · statsmodels (DiD, panel fixed-effects)
 
 `.github/workflows/ci.yml` runs on every push/PR to `main`: ruff lint +
 `pytest tests/` for the scraper and DiD regression, then a separate
 `dbt debug`/`dbt compile` job against BigQuery to catch model/schema
-breakage before it reaches a daily run.
+breakage before it reaches a daily run. Tool versions (ruff, dbt-core, dbt-bigquery) are 
+pinned and the lint rules live in ruff.toml, so local and CI runs check exactly 
+the same things.
 
 ## Setup
 
@@ -105,19 +111,26 @@ Tested on Python 3.11 (matches CI).
 7. `python -m analysis.did_analysis`
 8. `streamlit run dashboard/app.py`
 
-## Current status (as of 2026-09-17)
+## Current status (as of 2026-11-17)
 
-**Fixed this session** (full detail in commit history): a recurring `rq`
-game-mode bug that silently corrupted 6 unrecoverable days of
-`ow_raw.hero_rates` (now purged, plus a fail-loud sanity guard so it can't
-happen silently again); duplicate rows in BigQuery from a stray manual
-scrape and a double-load; an `is_post` day-0 boundary bug; a rework-classifier
-false positive on the bare word `"new"`; two DiD identification bugs —
-mixed buff+nerf heroes and cross-patch control leakage — both fixed via
-`scope_for_change_type()`; bug-fix-only patches (e.g. 2026-09-10) now
-register as events so affected heroes are pulled out of controls; and a
-`MIN_POST_DAYS` gate so a same-day patch isn't analyzed before it has any
-post-data.
+**Bugs found and fixed**:
+- **Silent upstream change (2026-08, 09):** Blizzard reassigned the `rq`
+  game-mode parameter, which silently corrupted 6 days of `ow_raw.hero_rates`
+  with all-zero ban rates. Purged the bad rows and added a fail-loud sanity
+  guard. `rq=2` was re-verified live on 2026-11-17.
+- **DiD identification (2026-09):** heroes both buffed and nerfed in one patch,
+  and controls leaking across overlapping patches, had reversed the estimated
+  effect. Both are fixed in `scope_for_change_type()`.
+- **Event and window logic (2026-09):** bug-fix-only patches now count as
+  events so their heroes leave the control group; day 0 is dropped as
+  ambiguous; `MIN_POST_DAYS` keeps a same-day patch out of the analysis.
+- **Data hygiene (2026-09):** duplicate BigQuery rows from a manual scrape and
+  a double load; a rework-classifier false positive on the bare word `"new"`.
+- **CI (2026-11):** green end to end for the first time after fixing an
+  uncommitted `profiles.yml`, unpinned tool versions, and a missing GCP secret.
+- **Guard false positive (2026-11-17):** the guard blocked an all-zero
+  snapshot that came from a new season's stats reset (53 → 54 heroes), not an
+  `rq` change. See Limitations.
 
 **Latest DiD results — patch dated 2026-09-08** (region = Americas, all
 non-`All` tiers, hero + rank-tier fixed effects, hero-clustered SEs).
@@ -136,6 +149,8 @@ day in `analysis/output/event_study_pick_rate_nerf.png`. Buff points the
 right way but isn't significant at n=5. Not enough data yet for the
 2026-09-17 D.Mon nerf (`MIN_POST_DAYS`) or for reworks (none on record after
 the classifier fix).
+
+![Event study: treated minus control pick rate, nerf, 2026-09-08 patch](docs/event_study_pick_rate_nerf.png)
 
 **Interpretation:** Nerfs moved pick rate significantly but not win rate.
 My hypothesis is that players react to the *signal* of a nerf (they stop
@@ -168,3 +183,7 @@ hypothesis from the design was not supported for this patch.
 - **Heroes buffed and nerfed in the same patch are excluded from both
   arms.** Their net effect is ambiguous, so `find_mixed_heroes` drops them
   rather than guessing a direction.
+- Collection gaps. The daily job runs on a laptop via launchd, so days the machine was off are missing (e.g. 2026-10-30 to 11-09). That left the
+  2026-11-03 patch without enough early post-patch data to analyze.
+- The ban-rate guard can't tell a parameter change from a stats reset. Both look like all-zero ban rates. A next step is to retry the other rq values
+  automatically, and to compare against the latest patch date before refusing a snapshot.
