@@ -26,13 +26,13 @@ TIERS = ["All", "Bronze", "Silver", "Gold", "Platinum", "Emerald", "Diamond", "M
 ROLE = "All"        # cosmetic only -- doesn't filter server-side, see module docstring
 MAP_FILTER = "all-maps"
 # rq mapping is NOT stable -- Blizzard has silently reassigned these IDs at
-# least twice (2026-08-22, and again as of 2026-09-08 when this file was
-# rewritten and the previous fix was lost). Verified live 2026-09-17:
-# rq=1 -> real ban data (Ana banrate ~11.5, matches historical). rq=0 and
-# rq=2 -> banrate=0 for every hero (a banless mode). If banrate goes
-# flat-zero again, re-verify all three rq values by hand before assuming "1"
+# least three times now (2026-08-22, 2026-09-08, and again as of 2026-09-22
+# where it flipped BACK to the pre-08-22 mapping). Verified live 2026-09-29:
+# rq=2 -> real ban data (Ana banrate ~11.4, matches historical). rq=0 and
+# rq=1 -> banrate=0 for every hero (a banless mode). If banrate goes
+# flat-zero again, re-verify all three rq values by hand before assuming "2"
 # is still right -- see the flat-zero guard in collect_all() below.
-GAME_MODE = "1"
+GAME_MODE = "2"
 PLATFORM = "PC"
 
 
