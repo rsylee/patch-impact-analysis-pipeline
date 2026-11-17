@@ -180,7 +180,7 @@ def scrape_patch_notes(hero_names: list[tuple[str, str]] | None = None) -> pd.Da
                 date_part = raw.split("–")[-1].strip()  # en-dash split
                 # immediately truncated to .date() -- a pure calendar date
                 # with no time component, so tz-awareness doesn't apply here
-                current_date = datetime.strptime(date_part, "%B %d, %Y").date()  # noqa: DTZ007
+                current_date = datetime.strptime(date_part, "%B %d, %Y").date()
             except ValueError:
                 current_date = None
             in_hero_updates = False

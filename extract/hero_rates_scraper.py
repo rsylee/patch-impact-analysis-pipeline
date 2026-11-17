@@ -11,7 +11,7 @@ Uses requests to pull the page HTML, then BeautifulSoup to locate the
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pandas as pd
 import requests
@@ -96,7 +96,7 @@ def parse_rows(region: str, tier: str, rows: list[dict], pulled_at: str) -> list
 def collect_all() -> pd.DataFrame:
     """Cycle through every (region, tier) combination (3 regions x 9 tiers
     = 27 requests) and return one combined DataFrame."""
-    pulled_at = datetime.now(timezone.utc).isoformat()
+    pulled_at = datetime.now(UTC).isoformat()
     all_rows = []
     for region in REGIONS:
         for tier in TIERS:
