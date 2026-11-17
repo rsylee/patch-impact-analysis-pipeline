@@ -23,15 +23,12 @@ logger = logging.getLogger(__name__)
 RATES_URL = "https://overwatch.blizzard.com/en-us/rates/"
 REGIONS = ["Americas", "Asia", "Europe"]
 TIERS = ["All", "Bronze", "Silver", "Gold", "Platinum", "Emerald", "Diamond", "Master", "Grandmaster"]
-ROLE = "All"        # cosmetic only -- doesn't filter server-side, see module docstring
+ROLE = "All"
 MAP_FILTER = "all-maps"
-# rq mapping is NOT stable -- Blizzard has silently reassigned these IDs at
-# least three times now (2026-08-22, 2026-09-08, and again as of 2026-09-22
-# where it flipped BACK to the pre-08-22 mapping). Verified live 2026-09-29:
-# rq=2 -> real ban data (Ana banrate ~11.4, matches historical). rq=0 and
-# rq=1 -> banrate=0 for every hero (a banless mode). If banrate goes
-# flat-zero again, re-verify all three rq values by hand before assuming "2"
-# is still right -- see the flat-zero guard in collect_all() below.
+# rq = game mode 
+# It has changed which rq means competitive around 3 times, so need to re-check before running another analysis.
+# Last verified 2026-11-17: rq=2 is competitive (real ban data); other values return banrate=0.
+# check_banrate_sanity() below stops the run if banrate goes all-zero.
 GAME_MODE = "2"
 PLATFORM = "PC"
 
@@ -110,8 +107,9 @@ def check_banrate_sanity(df: pd.DataFrame, zero_frac_threshold: float = 0.95) ->
     """Guard against the recurring rq-mode bug: if banrate comes back
     all/nearly-all zero, GAME_MODE is pointing at a banless mode again
     (Blizzard reassigned the rq IDs), not a real data pattern. Raise rather
-    than silently save/load corrupted data -- see the 2026-08-22 and
-    2026-09-08 incidents in project memory."""
+    than silently save/load corrupted data. Note: a new season's stats reset can
+    also look all-zero (seen 2026-11-17), so check the latest patch date before
+    assuming rq changed."""
     valid = df["banrate"].dropna()
     if len(valid) == 0:
         return
