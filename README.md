@@ -157,7 +157,8 @@ for reworks (none on record after the classifier fix).
 **Interpretation:** Nerfs moved pick rate significantly but not win rate.
 My hypothesis is that players react to the *signal* of a nerf (they stop
 picking the hero) faster than the hero's actual strength shows up in
-results. But this is not confirmed yet, since the win-rate estimate may
+results — the event study shows most of the pick-rate drop happening within
+two days of the patch. But this is not confirmed yet, since the win-rate estimate may
 simply be underpowered at n=8, and selection could also mask it — if
 casual players drop the hero first, the remaining players skew toward
 specialists, which props up its win rate. The ban-rate-as-leading-indicator
