@@ -10,11 +10,13 @@ when the win-rate effect is still too noisy to be significant.
 
 ## Why this project
 
-Traditional "patch impact" write-ups on Reddit/YouTube are purely
-descriptive (before/after pick rate). This project treats each patch as a
-natural experiment and applies difference-in-differences + event-study
-methodology to separate the *causal* effect of a balance change from
-natural meta drift.
+Blizzard drops balance patches pretty often, and people always argue about
+whether a buff or nerf actually did anything. I wanted to check that with
+data: do those patches really change how heroes are picked, how often they
+win, and how often they get banned, or would those numbers have moved
+anyway? To answer that, I used difference-in-differences, which compares the
+heroes that got patched with similar heroes that didn't, to see how much of
+the change actually comes from the patch.
 
 ## Data sources & scope
 
@@ -183,7 +185,7 @@ hypothesis from the design was not supported for this patch.
 - **Heroes buffed and nerfed in the same patch are excluded from both
   arms.** Their net effect is ambiguous, so `find_mixed_heroes` drops them
   rather than guessing a direction.
-- Collection gaps. The daily job runs on a laptop via launchd, so days the machine was off are missing (e.g. 2026-10-30 to 11-09). That left the
+- **Collection gaps.** The daily job runs on a laptop via launchd, so days the machine was off are missing (e.g. 2026-10-30 to 11-09). That left the
   2026-11-03 patch without enough early post-patch data to analyze.
 - The ban-rate guard can't tell a parameter change from a stats reset. Both look like all-zero ban rates. A next step is to retry the other rq values
   automatically, and to compare against the latest patch date before refusing a snapshot.
