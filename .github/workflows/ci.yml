@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install ruff
+          pip install ruff==0.16.8
 
       - name: Lint (ruff)
         run: ruff check extract/ load/ analysis/ dashboard/
