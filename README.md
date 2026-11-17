@@ -1,12 +1,12 @@
 # Overwatch Patch Impact Analytics Pipeline
 
 End-to-end ETL + causal inference pipeline that tracks how Overwatch balance
-patches (buffs/nerfs/reworks) causally affect hero pick rate, win rate, and
-ban rate, broken out by region and rank tier. Ban rate is included as a
-leading indicator alongside the two lagging ones: players tend to ban on
-reputation ("this buff made them scary") before pick/win rate fully catch
-up, so a patch's effect can show up there first, or show up there even
-when the win-rate effect is still too noisy to be significant.
+patches (buffs/nerfs/reworks) affect hero pick rate, win rate, and ban rate,
+broken out by region and rank tier. It scrapes Blizzard's official hero
+statistics daily into BigQuery, models them with dbt, and estimates patch
+effects with difference-in-differences. 
+**Key result:** nerfs in the
+2026-09-08 patch cut the nerfed heroes' pick rate by an estimated 2.59pp (p=0.005).
 
 ## Why this project
 
@@ -39,12 +39,10 @@ and excludes Blizzard's own cross-tier `'All'` bucket — see the comments in
 `transform/models/marts/mart_patch_event_panel.sql` for why. Asia/Europe
 and the `'All'` tier are still collected and available in the dashboard.
 
-An earlier version of this project scraped Blizzard's Top 500 leaderboard
-for battletags and queried the OverFast API per player — that approach was
-dropped once this page turned out to publish population-level rates
-directly, which is a better source (no per-player sampling/selection bias,
-no lifetime-cumulative stats diluting patch-window signal, no rate-limited
-per-player HTTP calls).
+I first tried sampling players through the OverFast API (one request per
+player), but switched once I found that Blizzard's own page publishes
+population-level rates. This change removed the sampling bias, the lifetime-cumulative
+stats, and the per-player rate limits in one step.
 
 ## Architecture
 
@@ -69,7 +67,8 @@ orchestration/dags/patch_impact_dag.py  # Airflow DAG (extract → load → dbt 
 
 analysis/
 ├── did_analysis.py         # Difference-in-Differences regression
-└── event_study.py          # parallel-trends event-study plots
+├── event_study.py          # event-study plots, pooled across patches
+└── did_robustness.py       # single-patch event study + pre-trend check
 
 dashboard/app.py            # Streamlit dashboard
 scripts/run_daily_snapshot.sh  # what's actually scheduling the daily run (see below)
@@ -96,7 +95,7 @@ GitHub Actions · statsmodels (DiD, panel fixed-effects)
 `pytest tests/` for the scraper and DiD regression, then a separate
 `dbt debug`/`dbt compile` job against BigQuery to catch model/schema
 breakage before it reaches a daily run. Tool versions (ruff, dbt-core, dbt-bigquery) are 
-pinned and the lint rules live in ruff.toml, so local and CI runs check exactly 
+pinned and the lint rules live in `ruff.toml`, so local and CI runs check exactly 
 the same things.
 
 ## Setup
@@ -149,8 +148,8 @@ Nerf's pick_rate effect is the cleanest signal on record so far — right
 direction, p=0.005, and the 2026-09-08 event study (below) shows a mostly flat
 pre-trend (a slight ~0.5pp drift over three weeks) followed by a sharp drop
 within two days of the patch. Buff points the right way but isn't significant
-at n=5. Not enough data yet for the 2026-09-17 D.Mon nerf (`MIN_POST_DAYS`) or
-for reworks (none on record after the classifier fix).
+at n=5. Later patches haven't been analyzed yet, and there are no
+reworks on record after the classifier fix.
 
 ![Event study: treated minus control pick rate, nerf, 2026-09-08 patch](docs/event_study_pick_rate_nerf.png)
 
@@ -174,7 +173,7 @@ hypothesis from the design was not supported for this patch.
   noisier. Not corrected for in the code.
 - **No historical backfill.** The page reflects only the current patch, so
   causal analysis only covers patches observed since this pipeline went live.
-- **Parallel-trends isn't guaranteed.** `event_study.py` checks it visually,
+- **Parallel-trends isn't guaranteed.** `did_robustness.py` checks it per patch,
   but same-patch confounders (map changes, other heroes shifting the meta)
   aren't controlled for in the regression.
 - **Region scope.** DiD is fixed to Americas to avoid mixing regional metas;
