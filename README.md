@@ -148,7 +148,9 @@ no season identifier anywhere in its markup.
 Nerf's pick_rate effect is the cleanest signal on record so far — right
 direction, p=0.005, and the 2026-09-08 event study (below) shows a mostly flat
 pre-trend (a slight ~0.5pp drift over three weeks) followed by a sharp drop
-within two days of the patch. Buff points the
+within two days of the patch. Buff points the right way but isn't significant
+at n=5. Not enough data yet for the 2026-09-17 D.Mon nerf (`MIN_POST_DAYS`) or
+for reworks (none on record after the classifier fix).
 
 ![Event study: treated minus control pick rate, nerf, 2026-09-08 patch](docs/event_study_pick_rate_nerf.png)
 
