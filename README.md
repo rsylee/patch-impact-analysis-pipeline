@@ -137,7 +137,7 @@ right way but isn't significant at n=5. Not enough data yet for the
 2026-09-17 D.Mon nerf (`MIN_POST_DAYS`) or for reworks (none on record after
 the classifier fix).
 
-**Interpretation.** Nerfs moved pick rate significantly but not win rate.
+**Interpretation:** Nerfs moved pick rate significantly but not win rate.
 My hypothesis is that players react to the *signal* of a nerf (they stop
 picking the hero) faster than the hero's actual strength shows up in
 results. But this is not confirmed yet, since the win-rate estimate may
